@@ -51,12 +51,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+Custom registry name
 */}}
-{{- define "chisel.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "chisel.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
-{{- end }}
+{{- define "customRegistry" -}}
+{{- if .Values.image.customRegistry -}}
+{{ printf "%s/" .Values.image.customRegistry -}}
+{{- else -}}
+{{ print "" }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Ingress path
+*/}}
+{{- define "ingressPath" -}}
+{{- if and (.Values.ingress.path ) (ne .Values.ingress.path "/") (ne .Values.ingress.path "") -}}
+{{ printf "%s(/|$)(.*)" .Values.ingress.path -}}
+{{- else -}}
+{{ print "/" }}
+{{- end -}}
+{{- end -}}

@@ -7,30 +7,27 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "chisel.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    kubernetes.io/ingress.class: nginx
+    {{- end }}
+    {{- if .Values.ingress.nginxRewrite }}
     nginx.ingress.kubernetes.io/rewrite-target: /$2
-  {{- end }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.tls }}
   tls:
-    {{- range .Values.ingress.tls }}
+    {{- if .Values.ingress.tls }}
     - hosts:
-        {{- range .hosts }}
-        - {{ . | quote }}
-        {{- end }}
-      secretName: {{ .secretName }}
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tls.secretName }}
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
+    - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: {{ .path }}
+          - path: {{ include "ingressPath" . }}
             pathType: Prefix
             backend:
               service:
@@ -38,5 +35,4 @@ spec:
                 port:
                   name: http
           {{- end }}
-    {{- end }}
 
