@@ -1,6 +1,6 @@
 apiVersion: v2
 name: chisel
-description: A Helm chart for jpillora's Chisel (https://github.com/jpillora/chisel)
+description: A Helm chart for jpillora's Chisel
 keywords:
   - chisel
   - kubernetes
