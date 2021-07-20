@@ -1,5 +1,5 @@
 # chisel-helm
-The unofficial Helm Chart for https://github.com/jpillora/chisel
+The unofficial Helm Chart for jpillora's Chisel. See more about Chisel at https://github.com/jpillora/chisel
 
 The goal of this project is to provide a Helm chart for running Chisel in Kubernetes. Also supports HTTP path routing!
 
