@@ -75,6 +75,11 @@ helm delete MY-RELEASE
 | `ingress.annotations` | Annotations added to the Ingress object | `` |
 | `ingress.nginxRewrite` | Used when you require a context root for Chisel. For example `/chisel` | `false` |
 | `ingress.tls.secretName` | The name of the Kubernetes secret to store the TLS secret for Ingress | `` |
+| `resources.requests.cpu` | The requested CPU per container | `10m` |
+| `resources.requests.memory` | The requested memory per container | `16Mi` |
+| `resources.limits.cpu` | The CPU limit per container | `100m` |
+| `resources.limits.memory` | The memory limit per container | `64Mi` |
+| `resources` | The Kubernetes `resources` section for CPU and memory requests and memory | `` |
 | `resources` | The Kubernetes `resources` section for CPU and memory requests and memory | `` |
 | `nodeSelector` | See Kubernetes docs | `` |
 | `tolerations` | See Kubernetes docs | `` |
