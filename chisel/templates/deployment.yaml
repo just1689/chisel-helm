@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chisel.fullname" . }}
+  labels:
+    {{- include "chisel.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "chisel.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "chisel.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - server
+            - --port=8080
+            {{- if .Values.args.auth }}
+            - --auth={{ .Values.args.auth }}
+            {{- end }}
+            {{- if .Values.args.host }}
+            - --host={{ .Values.args.host }}
+            {{- end }}
+            {{- if .Values.args.key }}
+            - --key={{ .Values.args.key }}
+            {{- end }}
+            {{- if .Values.args.authfile }}
+            - --authfile={{ .Values.args.authfile }} #remove for config map?
+            {{- end }}
+            {{- if .Values.args.keepalive }}
+            - --keepalive={{ .Values.args.keepalive }}
+            {{- end }}
+            {{- if .Values.args.backend }}
+            - --backend={{ .Values.args.backend }}
+            {{- end }}
+            {{- if .Values.args.socks5 }}
+            - --socks5={{ .Values.args.socks5 }}
+            {{- end }}
+            {{- if .Values.args.tls.key }}
+            - --tls.key={{ .Values.args.tls.key }}
+            {{- end }}
+            {{- if .Values.args.tls.cert }}
+            - --tls.cert={{ .Values.args.tls.cert }}
+            {{- end }}
+            {{- if .Values.args.tls.domain }}
+            - --tls.domain={{ .Values.args.tls.domain }}
+            {{- end }}
+            {{- if .Values.args.tls.ca }}
+            - --tls.ca={{ .Values.args.tls.ca }}
+            {{- end }}
+            {{- if .Values.args.verbose }}
+            - --v
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
