@@ -33,7 +33,6 @@ Install using the `values.yaml`
 helm install --namespace=default --values values.yaml chisel captains-charts/chisel
 chisel client https://mycluster.local 5000:some-remote:4200
 
-
 ```
 
 
