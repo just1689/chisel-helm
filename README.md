@@ -9,7 +9,7 @@ The goal of this project is to provide a Helm chart for running Chisel in Kubern
 helm repo add captains-charts https://storage.googleapis.com/captains-charts
 helm repo update
 helm install --namespace=default --set ingress.host=mycluster.local chisel captains-charts/chisel
-
+chisel client http://mycluster.local 5000:some-remote:4200
 
 ```
 
