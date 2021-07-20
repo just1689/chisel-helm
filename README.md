@@ -1,23 +1,41 @@
 # chisel-helm
 The unofficial Helm Chart for https://github.com/jpillora/chisel
 
-The goal of this project is to provide a Helm chart for running Chisel in Kubernetes.
+The goal of this project is to provide a Helm chart for running Chisel in Kubernetes. Also supports HTTP path routing!
 
 ## TL;DR
+
+Add the Helm repo
 ```bash
 
 helm repo add captains-charts https://storage.googleapis.com/captains-charts
 helm repo update
-helm install --namespace=default --set ingress.host=mycluster.local chisel captains-charts/chisel
-chisel client http://mycluster.local 5000:some-remote:4200
 
 ```
 
+Create a values.yaml
+```yaml
+ingress:
+  enabled: true
+  nginxRewrite: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/ingress.class: nginx
+  host: mycluster.local
+  path: /chisel
+  tls:
+    secretName: mycluster-local-tls-secret
+```
 
-## Required Values
+Install using the `values.yaml`
+```bash
 
-The following values are required to use the chart:
-- ingress.host
+helm install --namespace=default --values values.yaml chisel captains-charts/chisel
+chisel client https://mycluster.local 5000:some-remote:4200
+
+
+```
+
 
 ## Uninstalling
 ```bash
