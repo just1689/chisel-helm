@@ -1,3 +1,37 @@
+{{- $services := dict -}}
+{{- $_ := set $services "default" list -}}
+{{- if (eq .Values.mode "server") -}}
+ {{- range .Values.clients -}}
+  {{- range $serviceName, $ports := .services -}}
+   {{- /* filter the relevant entries */ -}}
+   {{- $newList := list -}}
+   {{- range $ports -}}
+    {{- if (eq .mode "to-client") -}}
+     {{- $newList = append $newList . -}}
+    {{- end -}}
+   {{- end -}}{{- /* range $ports */ -}}
+   {{- if (gt (len $newList) 0) -}}
+    {{- $_ := set $services $serviceName $newList -}}
+   {{- end -}}{{- /* if (gt (len $newList) 0)  */ -}}
+  {{- end -}}{{- /* range services */ -}}
+ {{- end -}}{{- /* range .Values.clients */ -}}
+{{- else -}}
+ {{- range $serviceName, $ports := .Values.services -}}
+  {{- /* filter the relevant entries */ -}}
+  {{- $newList := list -}}
+  {{- range $ports -}}
+   {{- if (eq .mode "to-server") -}}
+    {{- $newList = append $newList . -}}
+   {{- end -}}
+  {{- end -}}{{- /* range $ports */ -}}
+  {{- if (gt (len $newList) 0) -}}
+   {{- $_ := set $services $serviceName $newList -}}
+  {{- end -}}{{- /* if (gt (len $newList) 0)  */ -}}
+ {{- end -}}{{- /* range services */ -}}
+{{- end -}}
+
+{{- if or (eq .Values.mode "server") (gt (len $services.default) 0) }}
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,9 +41,69 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
+   {{- if eq .Values.mode "server" }}
     - port: {{ .Values.service.port }}
       targetPort: http
       protocol: TCP
       name: http
+   {{- end }}
+   {{- range $services.default }}
+   {{- $servicePort := (int (coalesce .servicePort .port)) }}
+    - port: {{ $servicePort }}
+      targetPort: {{ .port }}
+      protocol: TCP
+      {{- with .name }}
+      name: {{ . }}
+      {{- end }}
+   {{- end }}
   selector:
     {{- include "chisel.selectorLabels" . | nindent 4 }}
+{{- end }}
+
+{{- $chiselFullname := include "chisel.fullname" . -}}
+{{- $chiselLabels := include "chisel.labels" . | nindent 4 -}}
+{{- $chiselSelectorLabels := include "chisel.selectorLabels" . | nindent 4 -}}
+{{- range $serviceName, $ports := $services }}
+ {{- if ne $serviceName "default" -}}  {{- /* serviceName == default already handled */}}
+ {{- $opdata := dict -}}
+ {{- /* Servicename beginning with ^ overrides service object name */}}
+ {{- if hasPrefix "^" $serviceName -}}
+  {{- $_ := set $opdata "serviceName" (substr 1 999 $serviceName) -}}
+  {{- $_ := set $opdata "serviceObjName" (substr 1 999 $serviceName) -}}
+ {{- else -}}
+  {{- $_ := set $opdata "serviceObjName" (printf "%s-%s" $chiselFullname $serviceName) -}}
+  {{- $_ := set $opdata "serviceName" $serviceName -}}
+ {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $opdata.serviceObjName }}
+  labels:
+    {{- $chiselLabels }}
+spec:
+  {{- with (first $ports).serviceType }}
+  type: {{ . }}
+  {{- end }}
+  ports:
+  {{- range $ports }}
+   {{- $servicePort := (int (coalesce .servicePort .port)) }}
+    - port: {{ $servicePort }}
+      targetPort: {{ .port }}
+      protocol: TCP
+      {{- if .name }}
+      name: {{ .name }}
+      {{- else }}
+      {{- if gt (len $ports) 1 }}
+      name: {{ printf "%s-%d" $opdata.serviceName $servicePort }}
+      {{- else }}
+      name: {{ $opdata.serviceName }}
+      {{- end }}
+      {{- end }}
+  {{- end }}
+  selector:
+    {{- $chiselSelectorLabels }}
+ {{- end -}}{{- /* if ne $serviceName "default"  */ -}}
+{{- end }}{{- /* range $services */ -}}
+
