@@ -83,9 +83,40 @@ metadata:
   labels:
     {{- $chiselLabels }}
 spec:
-  {{- with (first $ports).serviceType }}
-  type: {{ . }}
+ {{- with (first $ports) }}{{- /* service settings are taken from first port entry */ -}}
+  {{- $type := default "ClusterIP" .serviceType }}
+  type: {{ $type }}
+  {{- if eq $type "ClusterIP" }}
+  {{- with .clusterIP }}
+  clusterIP: {{ . }}
   {{- end }}
+  {{- else if eq $type "LoadBalancer" }}
+  {{- with .loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  {{- with .externalTrafficPolicy }}
+  externalTrafficPolicy: {{ . }}
+  {{- end }}
+  {{- with .loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- if .sessionAffinity }}
+  sessionAffinity: {{ .sessionAffinity }}
+  {{- with .sessionAffinityConfig }}
+  sessionAffinityConfig:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- with .externalIPs }}
+  externalIPs:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .publishNotReadyAddresses }}
+  publishNotReadyAddresses: {{ . }}
+  {{- end }}
+ {{- end }}
   ports:
   {{- range $ports }}
    {{- $servicePort := (int (coalesce .servicePort .port)) }}

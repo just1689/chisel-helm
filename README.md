@@ -74,6 +74,10 @@ clients:
     - mode: to-client
       port: 7443
       endpoint: kubernetes.default.svc:443
+      serviceType: LoadBalancer
+      externalIPs:
+      - 192.168.1.10
+      externalTrafficPolicy: Local
     services:
     - mode: to-server
       port: 6080
@@ -246,6 +250,14 @@ For each service name / key an array of services can be defined. Each service de
 | `servicePort` | The port this service should be exposed on the service object. Defaults to `port` if omitted. |
 | `endpoint` | The destination to which chisel forwards this service. **required** |
 | `name` | Custom name of this service within the service |
+| `serviceType` | Only valid on first entry: Sets `type` for the kubernetes service definition. Defaults to `ClusterIP` |
+| `clusterIP` | Only valid on first entry: Sets `clusterIP` on the kubernetes service definition when `type=LoadBalancer` |
+| `loadBalancerIP` | Only valid on first entry: Sets `loadBalancerIP` on the kubernetes service definition when `type=LoadBalancer` |
+| `externalTrafficPolicy` | Only valid on first entry: Sets `externalTrafficPolicy` on the kubernetes service definition. |
+| `loadBalancerSourceRanges` | Only valid on first entry: Sets `loadBalancerSourceRanges` on the kubernetes service definition. |
+| `sessionAffinity` | Only valid on first entry: Sets `sessionAffinity` on the kubernetes service definition. |
+| `externalIPs` | Only valid on first entry: Sets `externalIPs` on the kubernetes service definition. |
+| `publishNotReadyAddresses` | Only valid on first entry: Sets `publishNotReadyAddresses` on the kubernetes service definition. |
 
 ### Optional parameters
 
