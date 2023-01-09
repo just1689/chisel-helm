@@ -4,6 +4,11 @@
 
 replicaCount: 1
 
+mode: server
+
+# no client config for server by default
+clients: []
+
 image:
   repository: jpillora/chisel
   pullPolicy: IfNotPresent
@@ -36,7 +41,6 @@ ingress:
   enabled: true
   nginxRewrite: false
   annotations: {}
-  host:
   path: /
 
 resources:

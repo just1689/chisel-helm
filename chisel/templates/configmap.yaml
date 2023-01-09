@@ -1,0 +1,27 @@
+{{- if and (eq .Values.mode "server")  (gt (len .Values.clients) 0) -}}
+  {{- $users := dict -}}
+  {{- range .Values.clients -}}
+    {{- $services := list -}}
+    {{- range $k, $v := .services -}}
+      {{- range $v -}}
+        {{- if eq .mode "to-server" -}}
+          {{- $services = append $services .endpoint -}}
+        {{- else -}}
+          {{- $services = append $services (printf "R:0.0.0.0:%d" (int .port)) -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $_ := set $users (printf "%s:%s" .user .password) $services -}}
+  {{- end }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chisel.fullname" . }}-config
+  labels:
+    {{- include "chisel.labels" . | nindent 4 }}
+data:
+  users.json: |
+    {{- $users | toPrettyJson | nindent 4 }}
+{{- end }}

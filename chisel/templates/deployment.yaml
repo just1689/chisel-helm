@@ -31,6 +31,7 @@ spec:
           image: "{{ include "customRegistry" . }}{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
+           {{- if eq .Values.mode "server"}}
             - server
             - --port=8080
             {{- if .Values.args.auth }}
@@ -42,37 +43,134 @@ spec:
             {{- if .Values.args.key }}
             - --key={{ .Values.args.key }}
             {{- end }}
-            {{- if .Values.args.authfile }}
-            - --authfile={{ .Values.args.authfile }} #remove for config map?
+            {{- if gt (len .Values.clients) 0 }}
+            - '--authfile=/etc/chisel/users.json'
             {{- end }}
             {{- if .Values.args.keepalive }}
             - --keepalive={{ .Values.args.keepalive }}
             {{- end }}
+            {{- if eq .Values.args.reverse true }}
+            - --reverse
+            {{- end }}
             {{- if .Values.args.backend }}
             - --backend={{ .Values.args.backend }}
             {{- end }}
-            {{- if .Values.args.socks5 }}
-            - --socks5={{ .Values.args.socks5 }}
+            {{- if eq .Values.args.socks5 true }}
+            - --socks5
             {{- end }}
             {{- if .Values.args.tls.key }}
-            - --tls.key={{ .Values.args.tls.key }}
+            - --tls-key={{ .Values.args.tls.key }}
             {{- end }}
             {{- if .Values.args.tls.cert }}
-            - --tls.cert={{ .Values.args.tls.cert }}
+            - --tls-cert={{ .Values.args.tls.cert }}
             {{- end }}
             {{- if .Values.args.tls.domain }}
-            - --tls.domain={{ .Values.args.tls.domain }}
+            - --tls-domain={{ .Values.args.tls.domain }}
             {{- end }}
             {{- if .Values.args.tls.ca }}
-            - --tls.ca={{ .Values.args.tls.ca }}
+            - --tls-ca={{ .Values.args.tls.ca }}
             {{- end }}
             {{- if .Values.args.verbose }}
             - --v
             {{- end }}
+           {{- else }}{{- /* if eq .Values.mode "server" */}}
+            - client
+            {{- if .Values.args.key }}
+            - --key={{ .Values.args.key }}
+            {{- end }}
+            {{- if .Values.args.keepalive }}
+            - --keepalive={{ .Values.args.keepalive }}
+            {{- end }}
+            {{- if .Values.args.maxRetryCount }}
+            - --max-retry-count={{ .Values.args.maxRetryCount }}
+            {{- end }}
+            {{- if .Values.args.maxRetryInterval }}
+            - --max-retry-interval={{ .Values.args.maxRetryInterval }}
+            {{- end }}
+            {{- if .Values.args.proxy }}
+            - --proxy={{ .Values.args.proxy }}
+            {{- end }}
+            {{- if .Values.args.header }}
+            - --header={{ .Values.args.header }}
+            {{- end }}
+            {{- if .Values.args.hostname }}
+            - --hostname={{ .Values.args.hostname }}
+            {{- end }}
+            {{- if .Values.args.tls.ca }}
+            - --tls-ca={{ .Values.args.tls.ca }}
+            {{- end }}
+            {{- if .Values.args.tls.skipVerify }}
+            - --tls-skip-verify={{ .Values.args.tls.skipVerify }}
+            {{- end }}
+            {{- if .Values.args.tls.key }}
+            - --tls-key={{ .Values.args.tls.key }}
+            {{- end }}
+            {{- if .Values.args.tls.cert }}
+            - --tls-cert={{ .Values.args.tls.cert }}
+            {{- end }}
+            {{- if .Values.args.verbose }}
+            - --v
+            {{- end }}
+            - {{ required "You must set .Values.args.server to the URL of the chisel server. Try adding --set args.server=https://chisel.example.org to your Helm command" .Values.args.server }}
+            {{- range $serviceName, $ports := .Values.services }}
+              {{- range $ports }}
+                {{- if eq .mode "to-server"}}
+            - "0.0.0.0:{{ .port }}:{{ .endpoint }}"
+                {{- else }}
+            - "R:0.0.0.0:{{ .port }}:{{ .endpoint }}"
+                {{- end }}
+              {{- end }}{{- /* range $ports */}}
+            {{- end }}{{- /* range .Values.services */}}
+           {{- end -}}{{- /* if eq .Values.mode "server"*/}}
+          {{- if eq .Values.mode "server"}}
+          env:
+            - name: CHISEL_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "chisel.fullname" . }}-secret
+                  key: key
+          {{- else }}{{- /* if eq .Values.mode "server" */}}
+           {{- if or (and .Values.credentials .Values.credentials.user .Values.credentials.password) .Values.args.fingerprint }}
+          env:
+            {{- if and .Values.credentials .Values.credentials.user .Values.credentials.password }}
+            - name: AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "chisel.fullname" . }}-secret
+                  key: auth
+            {{- end }}
+            {{- if .Values.args.fingerprint }}
+            - name: FINGERPRINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "chisel.fullname" . }}-secret
+                  key: fingerprint
+            {{- end }}
+           {{- end -}}{{- /* if or .Values.args.auth .Values.args.fingerprint */}}
+          {{- end -}}{{- /* if eq .Values.mode "server"*/}}
           ports:
+         {{- if eq .Values.mode "server"}}{{- /* lifeness probes only work for server right now... */}}
             - name: http
               containerPort: 8080
               protocol: TCP
+         {{- end }}
+        {{- range $serviceName, $ports := (include "services" . | fromJson) }}
+         {{- range $ports }}
+            - containerPort: {{ .port }}
+              protocol: TCP
+              {{- if .name }}
+              name: {{ .name }}
+              {{- else }}
+              {{- if gt (len $ports) 1 }}
+              name: {{ printf "%s-%d" (trimPrefix "^" $serviceName) (int .port) }}
+              {{- else }}
+              name: {{ $serviceName }}
+              {{- end }}
+              {{- end }}
+         {{- end}}
+        {{- end}}
+
+         {{- if eq .Values.mode "server"}}{{- /* lifeness probes only work for server right now... */}}
           livenessProbe:
             httpGet:
               path: /health
@@ -81,8 +179,15 @@ spec:
             httpGet:
               path: /health
               port: http
+         {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+        {{- if and (eq .Values.mode "server")  (gt (len .Values.clients) 0) }}
+          volumeMounts:
+            - name: chisel-config-map
+              mountPath: /etc/chisel/users.json
+              subPath: users.json
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -95,3 +200,10 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+    {{- if and (eq .Values.mode "server")  (gt (len .Values.clients) 0) }}
+      volumes:
+        - name: chisel-config-map
+          configMap:
+            name: {{ include "chisel.fullname" . }}-config
+            defaultMode: 0444
+    {{- end }}

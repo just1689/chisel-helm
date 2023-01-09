@@ -1,4 +1,4 @@
-{{- if .Values.ingress.enabled -}}
+{{- if and (eq .Values.mode "server") .Values.ingress.enabled -}}
 {{- $fullName := include "chisel.fullname" . -}}
 {{- $svcPort := .Values.service.port -}}
 apiVersion: networking.k8s.io/v1
@@ -7,9 +7,15 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "chisel.labels" . | nindent 4 }}
+    {{- with .Values.ingress.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
   annotations:
     {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if eq .Values.ingress.nginxRegex true }}
+    nginx.ingress.kubernetes.io/use-regex: "true"
     {{- end }}
     {{- if .Values.ingress.nginxRewrite }}
     nginx.ingress.kubernetes.io/rewrite-target: /$2
@@ -24,10 +30,18 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    - host: {{ .Values.ingress.host }}
+    - host: {{ required "You must set .Values.ingress.host to the host name of the chisel server. Try adding --set ingress.host=chisel.example.org to your Helm command" .Values.ingress.host }}
       http:
         paths:
-          - path: {{ include "ingressPath" . }}
+{{- if and (eq .Values.ingress.nginxRegex true) (.Values.ingress.path ) (ne .Values.ingress.path "/") (ne .Values.ingress.path "") }}
+          - path: {{ printf "%s(/|$)(.*)" .Values.ingress.path }}
+{{- else }}
+{{- if and (.Values.ingress.path ) (ne .Values.ingress.path "/") (ne .Values.ingress.path "") }}
+          - path: {{ .Values.ingress.path }}
+{{- else }}
+          - path: /
+{{- end }}
+{{- end }}
             pathType: Prefix
             backend:
               service:

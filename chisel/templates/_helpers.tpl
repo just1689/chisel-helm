@@ -62,12 +62,39 @@ Custom registry name
 {{- end -}}
 
 {{/*
-Ingress path
+Build service list
 */}}
-{{- define "ingressPath" -}}
-{{- if and (.Values.ingress.path ) (ne .Values.ingress.path "/") (ne .Values.ingress.path "") -}}
-{{ printf "%s(/|$)(.*)" .Values.ingress.path -}}
+{{- define "services" -}}
+{{- $services := dict -}}
+{{- $_ := set $services "default" list -}}
+{{- if (eq .Values.mode "server") -}}
+ {{- range .Values.clients -}}
+  {{- range $serviceName, $ports := .services -}}
+   {{- /* filter the relevant entries */ -}}
+   {{- $newList := list -}}
+   {{- range $ports -}}
+    {{- if (eq .mode "to-client") -}}
+     {{- $newList = append $newList . -}}
+    {{- end -}}
+   {{- end -}}{{- /* range $ports */ -}}
+   {{- if (gt (len $newList) 0) -}}
+    {{- $_ := set $services $serviceName $newList -}}
+   {{- end -}}{{- /* if (gt (len $newList) 0)  */ -}}
+  {{- end -}}{{- /* range services */ -}}
+ {{- end -}}{{- /* range .Values.clients */ -}}
 {{- else -}}
-{{ print "/" }}
+ {{- range $serviceName, $ports := .Values.services -}}
+  {{- /* filter the relevant entries */ -}}
+  {{- $newList := list -}}
+  {{- range $ports -}}
+   {{- if (eq .mode "to-server") -}}
+    {{- $newList = append $newList . -}}
+   {{- end -}}
+  {{- end -}}{{- /* range $ports */ -}}
+  {{- if (gt (len $newList) 0) -}}
+   {{- $_ := set $services $serviceName $newList -}}
+  {{- end -}}{{- /* if (gt (len $newList) 0)  */ -}}
+ {{- end -}}{{- /* range services */ -}}
 {{- end -}}
+{{ toJson $services }}
 {{- end -}}

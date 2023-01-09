@@ -1,3 +1,10 @@
+{{- if eq .Values.mode "server" }}
+{{- if .Values.ingress.enabled }}
+The Chisel URL for the client is: http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}{{ .Values.ingress.path }}
+{{- end }}
+To get the fingerprint for the server execute this command:
+  kubectl logs --namespace base-comm -l "app.kubernetes.io/name=chisel,app.kubernetes.io/instance=kis-p3s-1"  | grep Fingerprint | cut -d' ' -f5
+{{- else }}
 1. Get the application URL by running these commands:
 {{- if .Values.ingress.enabled }}
 {{- range $host := .Values.ingress.hosts }}
@@ -18,4 +25,5 @@
   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "chisel.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
   echo "Visit http://127.0.0.1:8080 to use your application"
   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:80
+{{- end }}
 {{- end }}
