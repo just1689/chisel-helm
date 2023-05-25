@@ -91,7 +91,13 @@ spec:
             - --proxy={{ .Values.args.proxy }}
             {{- end }}
             {{- if .Values.args.header }}
-            - --header={{ .Values.args.header }}
+              {{- if (.Values.args.header | kindIs "string") }}
+            - "--header={{ .Values.args.header }}"
+              {{- else }}
+                {{- range $header := .Values.args.header }}
+            - "--header={{ $header }}"
+                {{- end }}
+              {{- end }}
             {{- end }}
             {{- if .Values.args.hostname }}
             - --hostname={{ .Values.args.hostname }}
