@@ -38,6 +38,7 @@ service:
   port: 80
 
 ingress:
+  host: example.domain.com
   enabled: true
   nginxRewrite: false
   annotations: {}
