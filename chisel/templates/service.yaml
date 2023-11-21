@@ -82,6 +82,13 @@ metadata:
   name: {{ $opdata.serviceObjName }}
   labels:
     {{- $chiselLabels }}
+    {{- range $ports }}
+    {{- if .labels }}
+    {{- range $key, $value := .labels }}
+    {{ printf "%s: %v" $key $value }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
 spec:
  {{- with (first $ports) }}{{- /* service settings are taken from first port entry */ -}}
   {{- $type := default "ClusterIP" .serviceType }}
